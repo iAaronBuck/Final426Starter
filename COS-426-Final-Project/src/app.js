@@ -31,7 +31,7 @@ document.body.appendChild(canvas);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.enablePan = false;
-controls.minDistance = 5;
+controls.minDistance = 6;
 controls.maxDistance = 16;
 controls.update();
 
