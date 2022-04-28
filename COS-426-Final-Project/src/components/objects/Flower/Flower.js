@@ -2,6 +2,7 @@ import { Group } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { TWEEN } from 'three/examples/jsm/libs/tween.module.min.js';
 import MODEL from './flower.gltf';
+//import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 
 class Flower extends Group {
     constructor(parent) {
@@ -30,6 +31,44 @@ class Flower extends Group {
         // Populate GUI
         this.state.gui.add(this.state, 'bob');
         this.state.gui.add(this.state, 'spin');
+
+        // calls exporter for demo purposes before we integrate with GUI
+        //this.export();
+    }
+    export() {
+        const exporter = new GLTFExporter();
+
+        function downloadJSON( json, filename ) {
+            saveString( JSON.stringify( json ), filename );
+        }
+
+        var link = document.createElement( 'a' );
+        link.style.display = 'none';
+        document.body.appendChild( link ); // Firefox workaround, see #6594
+
+        function save( blob, filename ) {
+            link.href = URL.createObjectURL( blob );
+            link.download = filename;
+            link.click();
+        }
+
+        function saveString( text, filename ) {
+            save( new Blob( [ text ], { type: 'text/plain' } ), filename );
+        }
+
+        // Parse the input and generate the glTF output
+        exporter.parse(
+            this,
+            // called when the gltf has been generated
+            function ( gltf ) {
+                //console.log( gltf );
+                downloadJSON( gltf, 'flowerRemade.gltf' );
+            },
+            // called when there is an error in the generation
+            function ( error ) {
+                console.log( 'An error happened' );
+            }
+        );
     }
 
     spin() {
