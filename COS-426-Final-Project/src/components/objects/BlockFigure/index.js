@@ -1,0 +1,1 @@
+export { default as BlockFigure } from './BlockFigure.js';
