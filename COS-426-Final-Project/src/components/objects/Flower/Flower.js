@@ -106,6 +106,10 @@ class Flower extends Group {
         // Advance tween animations, if any exist
         TWEEN.update();
     }
+
+    cleanUp() {
+        ;
+    }
 }
 
 export default Flower;

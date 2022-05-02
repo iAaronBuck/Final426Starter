@@ -16,7 +16,8 @@ class Fox extends Group {
             action: null,
             mixer: null,
             clips: null,
-            action: "Run",
+            // Can select Survey Run or Walk
+            action: "Walk",
             survey: true
 
         };
@@ -43,8 +44,9 @@ class Fox extends Group {
     parent.addToUpdateList(this);
     
     // Populate GUI
-    this.state.gui.add(this.state, 'survey');
+    this.customGuiStuff = this.state.gui.add(this.state, 'survey');
     }
+    
     update(timeStamp){
         if (this.state.model != null){
             if (this.state.action == "Run"){
@@ -54,6 +56,10 @@ class Fox extends Group {
             const action = this.state.mixer.clipAction( clip );
             action.play();
         }
+    }
+
+    cleanUp() {
+        this.state.gui.remove(this.customGuiStuff)
     }
 
 

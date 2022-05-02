@@ -36,7 +36,8 @@ class BlockFigure extends Group {
 
         // Init state
         this.state = {
-            gui: parent.state.gui
+            gui: parent.state.gui,
+            parent: parent
         };
 
 		// Create group and add to scene
@@ -58,6 +59,7 @@ class BlockFigure extends Group {
 		this.headMaterial = new MeshLambertMaterial({ color: `hsl(${this.headHue}, 30%, ${this.headLightness}%)` });
 		this.bodyMaterial = new MeshLambertMaterial({ color: `hsl(${this.bodyHue}, 85%, 50%)` });
 		this.arms = [];
+        parent.addToUpdateList(this);
         this.init();
 	}
 
@@ -215,6 +217,13 @@ class BlockFigure extends Group {
         // mesh saving
         //this.export();
 	}
+
+    cleanUp() {
+        this.parent.remove(this.group);
+        // this.state.gui.remove(this.state, 'survey')
+    }
+
+
 }
 
 export default BlockFigure;
