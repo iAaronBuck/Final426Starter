@@ -2,6 +2,7 @@ import { Group, MeshLambertMaterial, BoxGeometry, Mesh, SphereGeometry } from 't
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import gsap from "gsap";
 import * as Dat from 'dat.gui';
+import { IcosahedronGeometry, CylinderGeometry} from 'three';
 
 const degreesToRadians = (degrees) => {
 	return degrees * (Math.PI / 180)
@@ -39,11 +40,13 @@ class BlockFigure extends Group {
         this.state = {
             gui: new Dat.GUI(),
             parent: parent,
-            blockSettings: {
+            running: false,
+            headMesh: null,
+            settings: {
                 animationType: 'Bouncing',
                 armType: 'blocky',
                 legType: 'blocky',
-                headType: 'blocky',
+                headType: 'spherical',
                 headHue: random(0, 360),
                 bodyHue: random(0, 360),
                 headLightness: random(40, 65),
@@ -53,9 +56,10 @@ class BlockFigure extends Group {
 
         var gui = this.state.gui;
 
-        var settings = this.state.blockSettings;
+        var settings = this.state.settings;
         var options = this.state;
 
+        // need to add the fields for each of the properties
         this.group = new Group();
 		parent.add(this.group);
 
@@ -69,7 +73,8 @@ class BlockFigure extends Group {
         // parent.addToUpdateList(this);
         
         const groupOG = this.group;
-        const OG = this;
+        
+        var OG = this;
 
         gui.add(options, "exportMeshNow").onChange((val) => {
             options.exportMeshNow = val;
@@ -80,27 +85,33 @@ class BlockFigure extends Group {
 
         gui.add(settings, 'headType', [ 'blocky', 'cylindrical', 'spherical'] ).onChange(function (value) {
             console.log(settings);
-            //const { updateList } = sceneOG.state;
+            // const { updateList } = sceneOG.state;
             // cleanUp loop, clear's scene on changes
             // upon re-render for change
             // this.parent.remove(this.group);
-            OG.parent.remove(this.group);
-            OG.parent.state.updateList.pop(this);
+            console.log(OG)
+            OG.state.parent.remove(OG.group);
+            console.log(OG.state.parent)
+            //OG.state.parent.state.updateList.pop(OG);
+            //OG.parent.remove(OG);
+            //this.init()
 
-            //OG.init()
+            //OG.remove(this.head);
+            // this.parent.remove(this.group);
+            // console.log(OG)
+            // OG.children.forEach(child =>
+            //     console.log(child));
+    
+            //OG.parent.state.updateList.pop(this);
+            OG.state.settings.headType = value;
+
+            OG.init()
 
             // after changes complete
-            OG.parent.add(OG);
-            OG.parent.addToUpdateList(OG);
-            
-            // if (value == 'Figure') {
-            //     const figure = new BlockFigure(sceneOG);
-            //     sceneOG.add(figure);
-            // }
-            // if (value == 'Flower') {
-            //     const flower = new Flower(sceneOG);
-            //     sceneOG.add(flower);
-            // }
+            OG.state.parent.add(OG.group);
+            //OG.state.parent.addToUpdateList(OG);
+            // OG.parent.add(OG)
+
         });
 
         // var blockSettings = {
@@ -183,12 +194,28 @@ class BlockFigure extends Group {
 
 	createHead() {
 		// Create a new group for the head
+        console.log(this.head);
+        if (this.state.headMesh != null) {
+            this.group.remove(this.head);
+            this.head.remove(this.state.headMesh);
+            
+        }
 		this.head = new Group();
+        var geometry = null;
 		// Create the main cube of the head and add to the group
 		// const geometry = new BoxGeometry(1.4, 1.4, 1.4);
-        const geometry = new SphereGeometry(0.85);
-		const headMain = new Mesh(geometry, this.headMaterial);
-		this.head.add(headMain);
+        if (this.state.settings.headType == "spherical") {
+            geometry = new SphereGeometry(0.85);
+        } else  if (this.state.settings.headType == "blocky") {
+            geometry = new BoxGeometry(1.4, 1.4, 1.4);
+        } else  if (this.state.settings.headType == "cylindrical") {
+            geometry = new CylinderGeometry(0.8, 0.8, 1.4);
+        } else {
+            geometry = new IcosahedronGeometry(0.85);
+        }
+
+		this.state.headMesh = new Mesh(geometry, this.headMaterial);
+		this.head.add(this.state.headMesh);
 		// Add the head group to the figure
 		this.group.add(this.head);
 		// Position the head group
@@ -260,6 +287,11 @@ class BlockFigure extends Group {
     };
 
     animate() {
+        if (!this.state.running) {
+            this.state.running = true;
+        } else {
+            return;
+        }
         gsap.set(this.params, {
             y: 2.5
         });

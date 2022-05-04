@@ -18,7 +18,7 @@ class SeedScene extends Scene {
         };
 
         // Set background to a nice color
-        this.background = new Color(0x7ec0ee);
+        this.background = new Color(Math.random(),Math.random(),Math.random());
 
         var settings = {
             //message: "dat.GUI",
@@ -27,7 +27,7 @@ class SeedScene extends Scene {
             //colorB: '#22CBFF', 
             //step5: 10,
             // range: 50,
-            mesh:"Flower"
+            mesh:"Figure"
             // speed:0,
             // func: function() 
             // { 
@@ -52,7 +52,7 @@ class SeedScene extends Scene {
         const sceneOG = this
 
         // controls optional meshes for scene by clearing and re-rendering
-        gui.add(settings, 'mesh', [ 'Figure', 'Fox', 'Flower'] ).onChange(function (value) {
+        gui.add(settings, 'mesh', ['Figure', 'Fox', 'Flower'] ).onChange(function (value) {
             console.log(settings);
             const { updateList } = sceneOG.state;
             // cleanUp loop, clear's scene on changes
@@ -76,14 +76,16 @@ class SeedScene extends Scene {
         });
 
         // Add default meshes to scene
-        const land = new Land();
-        const flower = new Flower(this);
+        //const land = new Land();
+        // const flower = new Flower(this);
+        const figure = new BlockFigure(sceneOG);
         const lights = new BasicLights();
 
-        this.add(land, flower, lights);
+        //this.add(land, flower, lights);
+        this.add(figure, lights);
 
         // Populate GUI
-        this.state.gui.add(this.state, 'rotationSpeed', -5, 5);
+        //this.state.gui.add(this.state, 'rotationSpeed', -5, 5);
     }
 
     addToUpdateList(object) {
@@ -92,7 +94,7 @@ class SeedScene extends Scene {
 
     update(timeStamp) {
         const { rotationSpeed, updateList } = this.state;
-        this.rotation.y = (rotationSpeed * timeStamp) / 10000;
+        //this.rotation.y = (rotationSpeed * timeStamp) / 10000;
 
         // Call update for each object in the updateList
         for (const obj of updateList) {
