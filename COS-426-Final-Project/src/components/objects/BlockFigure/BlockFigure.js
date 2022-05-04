@@ -44,7 +44,7 @@ class BlockFigure extends Group {
             headMesh: null,
             armMesh: null,
             settings: {
-                animationType: 'Bouncing',
+                animationType: 'Bounce',
                 armType: 'blocky',
                 legType: 'blocky',
                 headType: 'spherical',
@@ -82,6 +82,10 @@ class BlockFigure extends Group {
             if (options.exportMeshNow == true) {
                 OG.export()
             }
+        });
+
+        gui.add(settings, 'animationType', [ 'Bounce', 'Run', 'Walk', 'Dance'] ).onChange(function (value) {
+            OG.state.settings.animationType = value;
         });
 
         gui.add(settings, 'headType', [ 'blocky', 'cylindrical', 'spherical', 'icosahedron'] ).onChange(function (value) {
@@ -289,57 +293,94 @@ class BlockFigure extends Group {
 	}
 
 	bounce() {
-		this.group.rotation.y = this.params.ry;
 		this.group.position.y = this.params.y;
 		this.arms.forEach((arm, index) => {
 			const m = index % 2 === 0 ? 1 : -1
 			arm.rotation.z = this.params.armRotation * m;
 		});
+        this.legs.forEach((leg, index) => {
+			const m = index % 2 === 0 ? 1 : -1
+			leg.rotation.z = this.params.legRotation * m;
+		});
     };
 
     walk() {
-		this.group.rotation.y = this.params.ry;
-		this.group.position.y = this.params.y;
+        this.group.position.y = this.params.y;
 		this.legs.forEach((leg, index) => {
 			const m = index % 2 === 0 ? 1 : -1
 			leg.rotation.x = this.params.legRotation * m;
 		});
+        this.arms.forEach((arm, index) => {
+            const m = index % 2 === 0 ? 1 : -1
+            arm.rotation.x = this.params.armRotation * m;
+        });
+        
     };
 
     animate() {
-        if (!this.state.running) {
+        /*if (!this.state.running) {
             this.state.running = true;
         } else {
             return;
-        }
-        // gsap.set(this.params, {
-        //     y: 2.5
-        // });
-        // gsap.to(this.params, {
-        //     ry: degreesToRadians(360),
-        //     repeat: -1,
-        //     duration: 20
-        // });
-        // gsap.to(this.params, {
-        //     y: 0,
-        //     armRotation: degreesToRadians(90),
-        //     repeat: -1,
-        //     yoyo: true,
-        //     duration: 0.5
-        // });
-        gsap.to(this.params, {
-            //y: 0,
-            legRotation: degreesToRadians(60),
-            repeat: -1,
-            yoyo: true,
-            duration: 0.5
-        });
+        }*/
 
-        // provided timestep advancing
-        gsap.ticker.add(() => {
-            //this.bounce()
-            this.walk()
-        });
+        //Bounce
+        if(this.state.settings.animationType != 'Bounce'){
+            gsap.set(this.params, {
+                y: 0,
+                legRotation: degreesToRadians(0)
+            });
+            gsap.to(this.params, {
+                ry: degreesToRadians(360),
+                repeat: -1,
+                duration: 20
+            });
+            gsap.to(this.params, {
+                y: 3,
+                armRotation: degreesToRadians(90),
+                legRotation: degreesToRadians(30),
+                repeat: -1,
+                yoyo: true,
+                duration: 0.5
+            });
+
+            // provided timestep advancing
+            gsap.ticker.add(() => {
+                this.bounce()
+            });
+        }
+
+        //Walk
+        if(this.state.settings.animationType == 'Bounce'){
+            this.arms.forEach((arm, index) => {
+                const m = index % 2 === 0 ? 1 : -1
+                arm.rotation.z = .1 * m;
+            });
+            gsap.set(this.params, {
+                y: 0,
+                legRotation: degreesToRadians(-30),
+                armRotation: degreesToRadians(20),
+            });
+            gsap.to(this.params, {
+                repeat: -1,
+                duration: 20
+            });
+            gsap.to(this.params, {
+                y: .1,
+                armRotation: degreesToRadians(-20),
+                legRotation: degreesToRadians(30),
+                repeat: -3,
+                yoyoEase: "none",
+                duration: 0.5
+            });
+
+            // provided timestep advancing
+            gsap.ticker.add(() => {
+                this.walk()
+            });
+            
+        }
+
     }
 
 	init() {
