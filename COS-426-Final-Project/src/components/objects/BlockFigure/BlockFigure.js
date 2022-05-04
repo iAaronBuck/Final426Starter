@@ -42,6 +42,7 @@ class BlockFigure extends Group {
             parent: parent,
             running: false,
             headMesh: null,
+            armMesh: null,
             settings: {
                 animationType: 'Bouncing',
                 armType: 'blocky',
@@ -85,32 +86,35 @@ class BlockFigure extends Group {
 
         gui.add(settings, 'headType', [ 'blocky', 'cylindrical', 'spherical', 'icosahedron'] ).onChange(function (value) {
             console.log(settings);
-            // const { updateList } = sceneOG.state;
             // cleanUp loop, clear's scene on changes
             // upon re-render for change
             console.log(OG)
             OG.state.parent.remove(OG.group);
             console.log(OG.state.parent)
+            OG.arms = [];
+            OG.legs = [];
             OG.state.settings.headType = value;
 
             OG.init()
-
             // after changes complete
             OG.state.parent.add(OG.group);
-            //OG.state.parent.addToUpdateList(OG);
-            // OG.parent.add(OG)
-
         });
 
-        // var blockSettings = {
-        //     animationType: 'Bouncing',
-        //     armType: 'blocky',
-        //     legType: 'blocky',
-        //     headType: 'blocky',
-        //     headHue: random(0, 360),
-        //     bodyHue: random(0, 360),
-        //     headLightness: random(40, 65),
-        // }
+        gui.add(settings, 'armType', [ 'blocky', 'cylindrical'] ).onChange(function (value) {
+            console.log(settings);
+            // cleanUp loop, clear's scene on changes
+            // upon re-render for change
+            console.log(OG)
+            OG.state.parent.remove(OG.group);
+            console.log(OG.state.parent)
+            OG.arms = [];
+            OG.legs = [];
+            OG.state.settings.armType = value;
+
+            OG.init()
+            // after changes complete
+            OG.state.parent.add(OG.group);
+        });
         
 		// Create group and add to scene
 		this.group = new Group();
@@ -214,10 +218,16 @@ class BlockFigure extends Group {
 	}
 
 	createArms() {
+        //if 
 		const height = 0.85;
 		for(let i = 0; i < 2; i++) {
 			const armGroup = new Group();
-			const geometry = new BoxGeometry(0.25, height, 0.25);
+            if (this.state.settings.armType == "blocky") {
+                var geometry = new BoxGeometry(0.25, height, 0.25);
+            } else if (this.state.settings.armType == "cylindrical") {
+                var geometry = new CylinderGeometry(0.14, 0.14, height);
+            }
+			
 			const arm = new Mesh(geometry, this.headMaterial);
 			const m = i % 2 === 0 ? 1 : -1;
 			// Add arm to group
@@ -258,18 +268,24 @@ class BlockFigure extends Group {
 	}
 
 	createLegs() {
-		const legs = new Group();
-		const geometry = new BoxGeometry(0.25, 0.4, 0.25);
+		// const legs = new Group();
+		const geometry = new BoxGeometry(0.25, 0.8, 0.25);
 		for(let i = 0; i < 2; i++) {
+            const legGroup = new Group();
+
 			const leg = new Mesh(geometry, this.headMaterial);
 			const m = i % 2 === 0 ? 1 : -1;
-			legs.add(leg);
+            legGroup.add(leg);
+            this.body.add(legGroup);
+			//legs.add(leg);
 			leg.position.x = m * 0.22;
-            this.legs.push(leg);
+            leg.position.y = -1.45;
+            legGroup.rotation.x = 0; //degreesToRadians(30 * m);
+            this.legs.push(legGroup);
 		}
-		this.group.add(legs);
-		legs.position.y = -1.15;
-		this.body.add(legs);
+		//this.group.add(legs);
+		//legs.position.y = -1.15;
+		//this.body.add(legs);
 	}
 
 	bounce() {
@@ -286,7 +302,7 @@ class BlockFigure extends Group {
 		this.group.position.y = this.params.y;
 		this.legs.forEach((leg, index) => {
 			const m = index % 2 === 0 ? 1 : -1
-			leg.rotation.z = this.params.legRotation * m;
+			leg.rotation.x = this.params.legRotation * m;
 		});
     };
 
@@ -313,7 +329,7 @@ class BlockFigure extends Group {
         // });
         gsap.to(this.params, {
             //y: 0,
-            legRotation: degreesToRadians(90),
+            legRotation: degreesToRadians(60),
             repeat: -1,
             yoyo: true,
             duration: 0.5
@@ -328,15 +344,6 @@ class BlockFigure extends Group {
 
 	init() {
 		this.createBody();
-        // if (this.blockSettings.headType == "blocky") {
-        //     this.createBlockHead();
-        // } else if (this.blockSettings.headType == "cylindrical") {
-        //     this.createCylindricalHead();
-        // } else if (this.blockSettings.headType == "spherical") {
-        //     this.createCylindricalHead();
-        // } else if (this.blockSettings.headType == "icosahedron") {
-        //     this.createIcosahedronHead();
-        // }
         this.createHead();
 		
 		this.createArms();
