@@ -83,26 +83,14 @@ class BlockFigure extends Group {
             }
         });
 
-        gui.add(settings, 'headType', [ 'blocky', 'cylindrical', 'spherical'] ).onChange(function (value) {
+        gui.add(settings, 'headType', [ 'blocky', 'cylindrical', 'spherical', 'icosahedron'] ).onChange(function (value) {
             console.log(settings);
             // const { updateList } = sceneOG.state;
             // cleanUp loop, clear's scene on changes
             // upon re-render for change
-            // this.parent.remove(this.group);
             console.log(OG)
             OG.state.parent.remove(OG.group);
             console.log(OG.state.parent)
-            //OG.state.parent.state.updateList.pop(OG);
-            //OG.parent.remove(OG);
-            //this.init()
-
-            //OG.remove(this.head);
-            // this.parent.remove(this.group);
-            // console.log(OG)
-            // OG.children.forEach(child =>
-            //     console.log(child));
-    
-            //OG.parent.state.updateList.pop(this);
             OG.state.settings.headType = value;
 
             OG.init()
@@ -143,6 +131,7 @@ class BlockFigure extends Group {
 		this.headMaterial = new MeshLambertMaterial({ color: `hsl(${settings.headHue}, 30%, ${settings.headLightness}%)` });
 		this.bodyMaterial = new MeshLambertMaterial({ color: `hsl(${settings.bodyHue}, 85%, 50%)` });
 		this.arms = [];
+        this.legs = [];
         parent.addToUpdateList(this);
         this.init();
 	}
@@ -210,7 +199,7 @@ class BlockFigure extends Group {
             geometry = new BoxGeometry(1.4, 1.4, 1.4);
         } else  if (this.state.settings.headType == "cylindrical") {
             geometry = new CylinderGeometry(0.8, 0.8, 1.4);
-        } else {
+        } else if (this.state.settings.headType == "icosahedron"){
             geometry = new IcosahedronGeometry(0.85);
         }
 
@@ -258,9 +247,14 @@ class BlockFigure extends Group {
 			eye.position.x = 0.36 * m;
 		}
 		this.head.add(eyes);
+        if (this.state.settings.headType == 'icosahedron') {
+            eyes.position.z = 0.55;
+        } else {
+            eyes.position.z = 0.7;
+        }
 		// eyes.position.y = -0.1;
         eyes.position.y = 0.1;
-		eyes.position.z = 0.7;
+		
 	}
 
 	createLegs() {
@@ -271,6 +265,7 @@ class BlockFigure extends Group {
 			const m = i % 2 === 0 ? 1 : -1;
 			legs.add(leg);
 			leg.position.x = m * 0.22;
+            this.legs.push(leg);
 		}
 		this.group.add(legs);
 		legs.position.y = -1.15;
@@ -286,23 +281,39 @@ class BlockFigure extends Group {
 		});
     };
 
+    walk() {
+		this.group.rotation.y = this.params.ry;
+		this.group.position.y = this.params.y;
+		this.legs.forEach((leg, index) => {
+			const m = index % 2 === 0 ? 1 : -1
+			leg.rotation.z = this.params.legRotation * m;
+		});
+    };
+
     animate() {
         if (!this.state.running) {
             this.state.running = true;
         } else {
             return;
         }
-        gsap.set(this.params, {
-            y: 2.5
-        });
+        // gsap.set(this.params, {
+        //     y: 2.5
+        // });
+        // gsap.to(this.params, {
+        //     ry: degreesToRadians(360),
+        //     repeat: -1,
+        //     duration: 20
+        // });
+        // gsap.to(this.params, {
+        //     y: 0,
+        //     armRotation: degreesToRadians(90),
+        //     repeat: -1,
+        //     yoyo: true,
+        //     duration: 0.5
+        // });
         gsap.to(this.params, {
-            ry: degreesToRadians(360),
-            repeat: -1,
-            duration: 20
-        });
-        gsap.to(this.params, {
-            y: 0,
-            armRotation: degreesToRadians(90),
+            //y: 0,
+            legRotation: degreesToRadians(90),
             repeat: -1,
             yoyo: true,
             duration: 0.5
@@ -310,7 +321,8 @@ class BlockFigure extends Group {
 
         // provided timestep advancing
         gsap.ticker.add(() => {
-            this.bounce()
+            //this.bounce()
+            this.walk()
         });
     }
 
