@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Group, Int8Attribute } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-//import MODEL from './fox.gltf';
+import * as Dat from 'dat.gui';
 
 class Fox extends Group {
     constructor(parent) {
@@ -10,7 +10,7 @@ class Fox extends Group {
 
         // Init state
         this.state = {
-            gui: parent.state.gui,
+            gui: new Dat.GUI(),
             model: null,
             animation: null,
             action: null,
@@ -18,12 +18,14 @@ class Fox extends Group {
             clips: null,
             // Can select Survey Run or Walk
             action: "Walk",
-            survey: true
+            speed: 1
 
         };
 
         this.name = 'fox';
-    
+        var state = this.state;
+        var gui = this.state.gui;
+        
         var fox = this;
         const loader = new GLTFLoader();
         const source = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF/Fox.gltf";
@@ -32,6 +34,7 @@ class Fox extends Group {
             
             //Create animation mixer and clips to run later
             fox.state.model = gltf;
+            fox.state.mesh = gltf.scene;
             fox.state.mixer = new THREE.AnimationMixer( gltf.scene );
             fox.state.clips = fox.state.model.animations;
             
@@ -39,12 +42,47 @@ class Fox extends Group {
             this.scale.set(.05,.05,.05);
             this.translateX(2);
             console.log("loaded");
-    });
+        });
+
+        gui.add(state, 'action', [ 'Walk', 'Run', 'Survey'] ).onChange(function (value) {
+            state.mixer.stopAllAction();
+            state.action = value;
+        });
+
+
+        document.addEventListener('keydown', function(event){
+            if (event.code == 'ArrowLeft')
+            state.mesh.rotation.y += .1;
+            if (event.code == 'ArrowRight')
+            state.mesh.rotation.y -= .1;
+            if (event.code == 'ArrowUp')
+            state.mesh.position.z += 1;
+            state.action = "Walk"
+            if (event.code == 'ArrowDown')
+            state.mesh.position.z -= 1;
+            state.action = "Walk"
+        });
+
+        document.addEventListener('keyup', function(event){
+            if (event.code == 'ArrowUp')
+            state.mixer.stopAllAction();
+            state.action = "Survey"
+            if (event.code == 'ArrowDown')
+            state.mixer.stopAllAction();
+            state.action = "Survey"
+        });
+
+        
+        /*gui.add(state, 'speed', [0], [5] ).onChange(function (value) {
+            state.mixer.stopAllAction();
+            state.action = value;
+        });*/
+
     // Add self to parent's update list
     parent.addToUpdateList(this);
     
     // Populate GUI
-    this.customGuiStuff = this.state.gui.add(this.state, 'survey');
+    //this.customGuiStuff = this.state.gui.add(this.state, 'action');
     }
     
     update(timeStamp){
@@ -52,14 +90,17 @@ class Fox extends Group {
             if (this.state.action == "Run"){
                 this.state.mixer.update(.03);
             }else{this.state.mixer.update(.01)}
-            const clip = THREE.AnimationClip.findByName( this.state.model, this.state.action );
-            const action = this.state.mixer.clipAction( clip );
+            var clip = THREE.AnimationClip.findByName( this.state.model, this.state.action );
+            var action = this.state.mixer.clipAction( clip );
             action.play();
         }
     }
 
+
+
     cleanUp() {
-        this.state.gui.remove(this.customGuiStuff)
+        //this.state.gui.remove(this.customGuiStuff);
+        this.state.gui.destroy();
     }
 
 
