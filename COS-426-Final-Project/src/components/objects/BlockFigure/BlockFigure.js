@@ -53,6 +53,7 @@ class BlockFigure extends Group {
             legMesh: [],
             settings: {
                 animationType: 'Dance',
+                lastAnimation: '',
                 armType: 'blocky',
                 armColor: 0,
                 bodyType: 'blocky',
@@ -135,7 +136,7 @@ class BlockFigure extends Group {
             OG.arms = [];
             OG.legs = [];
             OG.state.settings.headColor = value;
-            OG.headMaterial = new MeshLambertMaterial({ color: value }); //`hsl(${OG.state.settings.headHue}, 30%, ${OG.state.settings.headLightness}%)` });
+            OG.headMaterial = new MeshLambertMaterial({ color: value });
 
             OG.init()
             // after changes complete
@@ -459,8 +460,10 @@ class BlockFigure extends Group {
             this.state.running = true;
             
         } else {
+            if (this.state.lastAnimation == this.state.animationType) {
+                return;
+            }
             //gsap.killTweensOf(this.params);
-            //this.state.running = ;
         }
         console.log(this.state.settings.animationType)
         //Bounce
@@ -514,7 +517,7 @@ class BlockFigure extends Group {
             // provided timestep advancing
             gsap.ticker.add(() => {
                 this.walk()
-            });   
+            });
         }
 
         //Run
@@ -580,6 +583,7 @@ class BlockFigure extends Group {
                 this.dance()
             });   
         }
+        this.state.lastAnimation = this.state.animationType;
     }
 
 
