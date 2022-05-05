@@ -317,6 +317,31 @@ class BlockFigure extends Group {
         
     };
 
+    run() {
+        this.group.position.y = this.params.y;
+		this.legs.forEach((leg, index) => {
+			const m = index % 2 === 0 ? 1 : -1
+			leg.rotation.x = this.params.legRotation * m-0.2;
+		});
+        this.arms.forEach((arm, index) => {
+            const m = index % 2 === 0 ? 1 : -1
+            arm.rotation.x = this.params.armRotation * m-0.2;
+        });
+        
+    };
+    dance() {
+        this.group.position.y = this.params.y;
+		this.legs.forEach((leg, index) => {
+			const m = index % 2 === 0 ? 1 : 0
+			leg.rotation.z = this.params.legRotation + degreesToRadians(60)*m;
+		});
+        this.arms.forEach((arm, index) => {
+            const m = index % 2 === 0 ? 1 : 2
+            arm.rotation.z = this.params.armRotation + degreesToRadians(90)*m;
+        });
+        
+    };
+
     animate() {
         if (!this.state.running) {
             this.state.running = true;
@@ -351,6 +376,70 @@ class BlockFigure extends Group {
         }
 
         //Walk
+        if(this.state.settings.animationType != 'Bounce'){
+            this.arms.forEach((arm, index) => {
+                const m = index % 2 === 0 ? 1 : -1
+                arm.rotation.z = .1 * m;
+            });
+            gsap.set(this.params, {
+                y: .1,
+                legRotation: degreesToRadians(-30),
+                armRotation: degreesToRadians(20),
+            });
+            gsap.to(this.params, {
+                y: 0,
+                repeat: -1,
+                duration: 0.25,
+                yoyo: true
+            });
+            gsap.to(this.params, {
+                armRotation: degreesToRadians(-20),
+                legRotation: degreesToRadians(30),
+                repeat: -3,
+                yoyoEase: 'none',
+                duration: 0.5
+            });
+
+            // provided timestep advancing
+            gsap.ticker.add(() => {
+                this.walk()
+            });   
+        }
+
+        //Run
+        if(this.state.settings.animationType != 'Bounce'){
+            this.arms.forEach((arm, index) => {
+                const m = index % 2 === 0 ? 1 : -1
+                arm.rotation.z = .1 * m;
+            });
+            this.body.rotation.x += .2;
+            this.head.position.z = .2;
+            gsap.set(this.params, {
+                y: .05,
+                legRotation: degreesToRadians(-50),
+                armRotation: degreesToRadians(-30),
+            });
+            gsap.to(this.params, {
+                y: 0,
+                repeat: -1,
+                duration: 0.1,
+                yoyoEase: 'power3'
+            });
+            gsap.to(this.params, {
+                armRotation: degreesToRadians(30),
+                legRotation: degreesToRadians(50),
+                repeat: -3,
+                yoyoEase: 'none',
+                duration: 0.2
+            });
+
+            // provided timestep advancing
+            gsap.ticker.add(() => {
+                this.run()
+            });   
+        }
+
+        //Dance
         if(this.state.settings.animationType == 'Bounce'){
             this.arms.forEach((arm, index) => {
                 const m = index % 2 === 0 ? 1 : -1
@@ -358,27 +447,27 @@ class BlockFigure extends Group {
             });
             gsap.set(this.params, {
                 y: 0,
-                legRotation: degreesToRadians(-30),
-                armRotation: degreesToRadians(20),
+                legRotation: degreesToRadians(0),
+                armRotation: degreesToRadians(0),
             });
             gsap.to(this.params, {
+                y: 1,
                 repeat: -1,
-                duration: 20
+                duration: .3,
+                yoyo: true
             });
             gsap.to(this.params, {
-                y: .1,
-                armRotation: degreesToRadians(-20),
-                legRotation: degreesToRadians(30),
+                legRotation: degreesToRadians(-60),
+                armRotation: degreesToRadians(90),
                 repeat: -3,
-                yoyoEase: "none",
-                duration: 0.5
+                yoyoEase: 'none',
+                duration: 0.6
             });
 
             // provided timestep advancing
             gsap.ticker.add(() => {
-                this.walk()
-            });
-            
+                this.dance()
+            });   
         }
 
     }
