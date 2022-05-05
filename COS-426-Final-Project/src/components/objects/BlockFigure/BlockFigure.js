@@ -2,7 +2,9 @@ import { Group, MeshLambertMaterial, BoxGeometry, Mesh, SphereGeometry } from 't
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import gsap from "gsap";
 import * as Dat from 'dat.gui';
-import { IcosahedronGeometry, CylinderGeometry} from 'three';
+import { IcosahedronGeometry, CylinderGeometry, ConeGeometry} from 'three';
+import { MeshPhysicalMaterial } from 'three';
+import { MeshPhongMaterial } from 'three';
 
 const degreesToRadians = (degrees) => {
 	return degrees * (Math.PI / 180)
@@ -27,10 +29,14 @@ class BlockFigure extends Group {
         super();
         // positioning coords and rotation
 		this.params = {
-			x: -2.5,
-			y: 3,
-			z: -0.5,
-			ry: 0,
+			// x: -1.5,
+			// y: 0,
+			// z: 1.5,
+			// ry: degreesToRadians(0),
+            x: -2.5,
+            y: 3,
+            z: -0.5,
+            ry: 0,
 			...params
 		};
 
@@ -42,15 +48,30 @@ class BlockFigure extends Group {
             parent: parent,
             running: false,
             headMesh: null,
-            armMesh: null,
+            bodyMesh: null,
+            armMesh: [],
+            legMesh: [],
             settings: {
-                animationType: 'Bounce',
+                animationType: 'Dance',
                 armType: 'blocky',
+                armColor: 0,
+                bodyType: 'blocky',
+                bodyColor: 0,
                 legType: 'blocky',
-                headType: 'spherical',
+                legColor: 0,
+                headType: 'conic',
                 headHue: random(0, 360),
+                headColor: 0,
                 bodyHue: random(0, 360),
                 headLightness: random(40, 65),
+            },
+            materialOptions: {
+                transmission: 1,
+                thickness: 1.5,
+                roughness: 0.67,
+                envMapIntensity: 1.5,
+                clearcoat: 1,
+                clearcoatRoughness: 0.12
             },
             exportMeshNow: false
         };
@@ -64,37 +85,40 @@ class BlockFigure extends Group {
         this.group = new Group();
 		parent.add(this.group);
 
-        // upon re-render for change
-        // this.parent.remove(this.group);
-        // parent.remove(this.group);
-        // parent.pop(this);
 
-        // // after changes complete
-        // parent.add(this);
-        // parent.addToUpdateList(this);
-        
-        const groupOG = this.group;
-        
+        // used within GUI calls
         var OG = this;
 
-        gui.add(options, "exportMeshNow").onChange((val) => {
-            options.exportMeshNow = val;
+        gui.add(options, "exportMeshNow").onChange((value) => {
+            options.exportMeshNow = value;
             if (options.exportMeshNow == true) {
                 OG.export()
             }
         });
 
         gui.add(settings, 'animationType', [ 'Bounce', 'Run', 'Walk', 'Dance'] ).onChange(function (value) {
+            OG.state.parent.remove(OG.group);
+            OG.arms = [];
+            OG.legs = [];
             OG.state.settings.animationType = value;
+            //console.log(value);
+
+            OG.init()
+            // after changes complete
+            OG.state.parent.add(OG.group);
         });
 
-        gui.add(settings, 'headType', [ 'blocky', 'cylindrical', 'spherical', 'icosahedron'] ).onChange(function (value) {
-            console.log(settings);
+        // gui.add(options, "materialOptions").onChange((value) => {
+        //     options.materialOptions = value;
+        //     if (options.exportMeshNow == true) {
+        //         OG.export()
+        //     }
+        // });
+
+        gui.add(settings, 'headType', [ 'blocky', 'cylindrical', 'spherical', 'icosahedron', 'conic'] ).onChange(function (value) {
             // cleanUp loop, clear's scene on changes
             // upon re-render for change
-            console.log(OG)
             OG.state.parent.remove(OG.group);
-            console.log(OG.state.parent)
             OG.arms = [];
             OG.legs = [];
             OG.state.settings.headType = value;
@@ -104,17 +128,93 @@ class BlockFigure extends Group {
             OG.state.parent.add(OG.group);
         });
 
-        gui.add(settings, 'armType', [ 'blocky', 'cylindrical'] ).onChange(function (value) {
-            console.log(settings);
+        gui.addColor(settings,'headColor').onChange(function (value) {
             // cleanUp loop, clear's scene on changes
             // upon re-render for change
-            console.log(OG)
             OG.state.parent.remove(OG.group);
-            console.log(OG.state.parent)
+            OG.arms = [];
+            OG.legs = [];
+            OG.state.settings.headColor = value;
+            OG.headMaterial = new MeshLambertMaterial({ color: value }); //`hsl(${OG.state.settings.headHue}, 30%, ${OG.state.settings.headLightness}%)` });
+
+            OG.init()
+            // after changes complete
+            OG.state.parent.add(OG.group);
+        });
+
+        gui.add(settings, 'bodyType', [ 'blocky', 'cylindrical', 'spherical', 'icosahedron'] ).onChange(function (value) {
+            // cleanUp loop, clear's scene on changes
+            // upon re-render for change
+            OG.state.parent.remove(OG.group);
+            OG.arms = [];
+            OG.legs = [];
+            OG.state.settings.bodyType = value;
+
+            OG.init()
+            // after changes complete
+            OG.state.parent.add(OG.group);
+        });
+
+        gui.addColor(settings,'bodyColor').onChange(function (value) {
+            // cleanUp loop, clear's scene on changes
+            // upon re-render for change
+            OG.state.parent.remove(OG.group);
+            OG.arms = [];
+            OG.legs = [];
+            OG.bodyMaterial = new MeshLambertMaterial({ color: value });
+            
+            OG.init()
+            // after changes complete
+            OG.state.parent.add(OG.group);
+        });
+
+        gui.add(settings, 'armType', [ 'blocky', 'cylindrical'] ).onChange(function (value) {
+            // cleanUp loop, clear's scene on changes
+            // upon re-render for change
+            OG.state.parent.remove(OG.group);
             OG.arms = [];
             OG.legs = [];
             OG.state.settings.armType = value;
 
+            OG.init()
+            // after changes complete
+            OG.state.parent.add(OG.group);
+        });
+
+        gui.addColor(settings,'armColor').onChange(function (value) {
+            // cleanUp loop, clear's scene on changes
+            // upon re-render for change
+            OG.state.parent.remove(OG.group);
+            OG.arms = [];
+            OG.legs = [];
+            OG.armMaterial = new MeshLambertMaterial({ color: value });
+
+            OG.init()
+            // after changes complete
+            OG.state.parent.add(OG.group);
+        });
+
+        gui.add(settings, 'legType', [ 'blocky', 'cylindrical'] ).onChange(function (value) {
+            // cleanUp loop, clear's scene on changes
+            // upon re-render for change
+            OG.state.parent.remove(OG.group);
+            OG.arms = [];
+            OG.legs = [];
+            OG.state.settings.legType = value;
+
+            OG.init()
+            // after changes complete
+            OG.state.parent.add(OG.group);
+        });
+
+        gui.addColor(settings,'legColor').onChange(function (value) {
+            // cleanUp loop, clear's scene on changes
+            // upon re-render for change
+            OG.state.parent.remove(OG.group);
+            OG.arms = [];
+            OG.legs = [];
+            OG.legMaterial = new MeshLambertMaterial({ color: value });
+            
             OG.init()
             // after changes complete
             OG.state.parent.add(OG.group);
@@ -136,7 +236,8 @@ class BlockFigure extends Group {
 		// this.headHue = random(0, 360);
 		// this.bodyHue = random(0, 360);
 		// this.headLightness = random(40, 65);
-		this.headMaterial = new MeshLambertMaterial({ color: `hsl(${settings.headHue}, 30%, ${settings.headLightness}%)` });
+		this.headMaterial = new MeshPhongMaterial({ color: `hsl(${settings.headHue}, 30%, ${settings.headLightness}%)` });
+        this.armMaterial = new MeshLambertMaterial({ color: `hsl(${settings.headHue}, 30%, ${settings.headLightness}%)` });
 		this.bodyMaterial = new MeshLambertMaterial({ color: `hsl(${settings.bodyHue}, 85%, 50%)` });
 		this.arms = [];
         this.legs = [];
@@ -144,71 +245,54 @@ class BlockFigure extends Group {
         this.init();
 	}
 
-    export() {
-        const exporter = new GLTFExporter();
-
-        function downloadJSON( json, filename ) {
-            saveString( JSON.stringify( json ), filename );
-        }
-
-        var link = document.createElement( 'a' );
-        link.style.display = 'none';
-        document.body.appendChild( link ); // Firefox workaround, see #6594
-
-        function save( blob, filename ) {
-            link.href = URL.createObjectURL( blob );
-            link.download = filename;
-            link.click();
-        }
-
-        function saveString( text, filename ) {
-            save( new Blob( [ text ], { type: 'text/plain' } ), filename );
-        }
-
-        // Parse the input and generate the glTF output
-        exporter.parse(
-            this,
-            // called when the gltf has been generated
-            function ( gltf ) {
-                //console.log( gltf );
-                downloadJSON( gltf, 'blockFigure.gltf' );
-            },
-            // called when there is an error in the generation
-            function ( error ) {
-                console.log( 'An error happened' );
-            }
-        );
-    }
+    
 
 	createBody() {
+        if (this.state.headMesh != null) {
+            this.group.remove(this.body);
+            this.body.remove(this.state.bodyMesh);
+        }
 		this.body = new Group();
-		const geometry = new BoxGeometry(1, 1.5, 1);
-		const bodyMain = new Mesh(geometry, this.bodyMaterial);
-		this.body.add(bodyMain);
+		var geometry = null;
+        if (this.state.settings.bodyType == "spherical") {
+            geometry = new IcosahedronGeometry(0.82,2);
+        } else  if (this.state.settings.bodyType == "blocky") {
+            geometry = new BoxGeometry(1, 1.5, 1);
+        } else  if (this.state.settings.bodyType == "cylindrical") {
+            geometry = new CylinderGeometry(0.65, 0.65, 1.5);
+        } else if (this.state.settings.bodyType == "icosahedron"){
+            geometry = new IcosahedronGeometry(0.95, 0);
+        } //else if (this.state.settings.bodyType == "torus"){
+        //     geometry = new TorusGeometry(1, 0.3, 1.6, 10)
+        // }
+		const bodyMesh = new Mesh(geometry, this.bodyMaterial);
+        this.state.bodyMesh = bodyMesh;
+		this.body.add(this.state.bodyMesh);
 		this.group.add(this.body);
 		this.createLegs();
 	}
 
 	createHead() {
 		// Create a new group for the head
-        console.log(this.head);
+        //console.log(this.head);
         if (this.state.headMesh != null) {
             this.group.remove(this.head);
             this.head.remove(this.state.headMesh);
-            
         }
 		this.head = new Group();
         var geometry = null;
 		// Create the main cube of the head and add to the group
 		// const geometry = new BoxGeometry(1.4, 1.4, 1.4);
         if (this.state.settings.headType == "spherical") {
-            geometry = new SphereGeometry(0.85);
+            geometry = new IcosahedronGeometry(0.85,2);
         } else  if (this.state.settings.headType == "blocky") {
             geometry = new BoxGeometry(1.4, 1.4, 1.4);
         } else  if (this.state.settings.headType == "cylindrical") {
             geometry = new CylinderGeometry(0.8, 0.8, 1.4);
         } else if (this.state.settings.headType == "icosahedron"){
             geometry = new IcosahedronGeometry(0.85);
+        } else if (this.state.settings.headType == 'conic') {
+            geometry = new ConeGeometry(0.85, 1.5);
         }
 
 		this.state.headMesh = new Mesh(geometry, this.headMaterial);
@@ -217,22 +301,32 @@ class BlockFigure extends Group {
 		this.group.add(this.head);
 		// Position the head group
 		this.head.position.y = 1.65;
+        if (this.state.settings.headType == 'conic') {
+            this.head.position.y += 0.2
+        }
 		// Add the eyes
 		this.createEyes();
 	}
 
 	createArms() {
-        //if 
+        if (this.state.armMesh.length > 0 ) {
+            this.body.remove(this.state.armMesh[0]);
+            this.body.remove(this.state.armMesh[1]);
+            this.state.armMesh[0].remove(this.state.armMesh[0].children[0]);
+            this.state.armMesh[1].remove(this.state.armMesh[1].children[0]);
+            this.arms = [];
+            this.state.armMesh = [];
+        }
 		const height = 0.85;
 		for(let i = 0; i < 2; i++) {
 			const armGroup = new Group();
             if (this.state.settings.armType == "blocky") {
                 var geometry = new BoxGeometry(0.25, height, 0.25);
             } else if (this.state.settings.armType == "cylindrical") {
-                var geometry = new CylinderGeometry(0.14, 0.14, height);
+                var geometry = new CylinderGeometry(0.18, 0.18, height);
             }
-			
-			const arm = new Mesh(geometry, this.headMaterial);
+
+			const arm = new Mesh(geometry, this.armMaterial);
 			const m = i % 2 === 0 ? 1 : -1;
 			// Add arm to group
 			armGroup.add(arm);
@@ -248,6 +342,8 @@ class BlockFigure extends Group {
 			// Push to the array
 			this.arms.push(armGroup);
 		}
+        this.state.armMesh.push(this.arms[0]);
+        this.state.armMesh.push(this.arms[1]);
 	}
 
 	createEyes() {
@@ -261,23 +357,37 @@ class BlockFigure extends Group {
 			eye.position.x = 0.36 * m;
 		}
 		this.head.add(eyes);
+        eyes.position.y = 0.1;
         if (this.state.settings.headType == 'icosahedron') {
             eyes.position.z = 0.55;
+        } else if (this.state.settings.headType == 'conic') {
+            eyes.position.z = 0.35;
+            eyes.position.y -= 0.3
         } else {
             eyes.position.z = 0.7;
         }
-		// eyes.position.y = -0.1;
-        eyes.position.y = 0.1;
-		
 	}
 
 	createLegs() {
 		// const legs = new Group();
-		const geometry = new BoxGeometry(0.25, 0.8, 0.25);
+		// const geometry = new BoxGeometry(0.25, 0.8, 0.25);
+        if (this.state.legMesh.length > 0 ) {
+            this.body.remove(this.state.legMesh[0]);
+            this.body.remove(this.state.legMesh[1]);
+            this.state.legMesh[0].remove(this.state.legMesh[0].children[0]);
+            this.state.legMesh[1].remove(this.state.legMesh[1].children[0]);
+            this.arms = [];
+            this.state.legMesh = [];
+        }
 		for(let i = 0; i < 2; i++) {
             const legGroup = new Group();
+            if (this.state.settings.legType == "blocky") {
+                var geometry = new BoxGeometry(0.25, 0.8, 0.25);
+            } else if (this.state.settings.legType == "cylindrical") {
+                var geometry = new CylinderGeometry(0.18, 0.18, 0.8);
+            }
 
-			const leg = new Mesh(geometry, this.headMaterial);
+			const leg = new Mesh(geometry, this.legMaterial);
 			const m = i % 2 === 0 ? 1 : -1;
             legGroup.add(leg);
             this.body.add(legGroup);
@@ -287,29 +397,30 @@ class BlockFigure extends Group {
             legGroup.rotation.x = 0; //degreesToRadians(30 * m);
             this.legs.push(legGroup);
 		}
+        this.state.legMesh.push(this.legs[0]);
+        this.state.legMesh.push(this.legs[1]);
 		//this.group.add(legs);
 		//legs.position.y = -1.15;
 		//this.body.add(legs);
 	}
 
 	bounce() {
-		this.group.position.y = this.params.y;
-		this.arms.forEach((arm, index) => {
-			const m = index % 2 === 0 ? 1 : -1
-			arm.rotation.z = this.params.armRotation * m;
-		});
+        this.group.position.y = this.params.y;
+        this.arms.forEach((arm, index) => {
+            const m = index % 2 === 0 ? 1 : -1
+            arm.rotation.z = this.params.armRotation * m;
+        });
         this.legs.forEach((leg, index) => {
-			const m = index % 2 === 0 ? 1 : -1
-			leg.rotation.z = this.params.legRotation * m;
-		});
+            const m = index % 2 === 0 ? 1 : -1
+            leg.rotation.z = this.params.legRotation * m;
+        });
     };
-
     walk() {
         this.group.position.y = this.params.y;
-		this.legs.forEach((leg, index) => {
-			const m = index % 2 === 0 ? 1 : -1
-			leg.rotation.x = this.params.legRotation * m;
-		});
+        this.legs.forEach((leg, index) => {
+            const m = index % 2 === 0 ? 1 : -1
+            leg.rotation.x = this.params.legRotation * m;
+        });
         this.arms.forEach((arm, index) => {
             const m = index % 2 === 0 ? 1 : -1
             arm.rotation.x = this.params.armRotation * m;
@@ -329,6 +440,7 @@ class BlockFigure extends Group {
         });
         
     };
+
     dance() {
         this.group.position.y = this.params.y;
 		this.legs.forEach((leg, index) => {
@@ -345,12 +457,14 @@ class BlockFigure extends Group {
     animate() {
         if (!this.state.running) {
             this.state.running = true;
+            
         } else {
-            return;
+            //gsap.killTweensOf(this.params);
+            //this.state.running = ;
         }
-
+        console.log(this.state.settings.animationType)
         //Bounce
-        if(this.state.settings.animationType != 'Bounce'){
+        if(this.state.settings.animationType == 'Bounce'){
             gsap.set(this.params, {
                 y: 0,
                 legRotation: degreesToRadians(0)
@@ -368,15 +482,13 @@ class BlockFigure extends Group {
                 yoyo: true,
                 duration: 0.5
             });
-
             // provided timestep advancing
             gsap.ticker.add(() => {
                 this.bounce()
             });
         }
-
         //Walk
-        if(this.state.settings.animationType != 'Bounce'){
+        if(this.state.settings.animationType == 'Walk'){
             this.arms.forEach((arm, index) => {
                 const m = index % 2 === 0 ? 1 : -1
                 arm.rotation.z = .1 * m;
@@ -399,7 +511,6 @@ class BlockFigure extends Group {
                 yoyoEase: 'none',
                 duration: 0.5
             });
-
             // provided timestep advancing
             gsap.ticker.add(() => {
                 this.walk()
@@ -407,7 +518,7 @@ class BlockFigure extends Group {
         }
 
         //Run
-        if(this.state.settings.animationType != 'Bounce'){
+        if(this.state.settings.animationType == 'Run'){
             this.arms.forEach((arm, index) => {
                 const m = index % 2 === 0 ? 1 : -1
                 arm.rotation.z = .1 * m;
@@ -440,7 +551,7 @@ class BlockFigure extends Group {
         }
 
         //Dance
-        if(this.state.settings.animationType == 'Bounce'){
+        if(this.state.settings.animationType == 'Dance'){
             this.arms.forEach((arm, index) => {
                 const m = index % 2 === 0 ? 1 : -1
                 arm.rotation.z = .1 * m;
@@ -469,20 +580,53 @@ class BlockFigure extends Group {
                 this.dance()
             });   
         }
-
     }
+
 
 	init() {
 		this.createBody();
         this.createHead();
 		
 		this.createArms();
+        // console.log(this);
         this.animate();
         // for exporting gltf file of mesh, can be enabled
         // will likely integrate with gui for user-selected
         // mesh saving
         //this.export();
 	}
+
+    export() {
+        const exporter = new GLTFExporter();
+
+        function downloadJSON( json, filename ) {
+            saveString( JSON.stringify( json ), filename );
+        }
+
+        var link = document.createElement( 'a' );
+        link.style.display = 'none';
+        document.body.appendChild( link );
+
+        function save( blob, filename ) {
+            link.href = URL.createObjectURL( blob );
+            link.download = filename;
+            link.click();
+        }
+
+        function saveString( text, filename ) {
+            save( new Blob( [ text ], { type: 'text/plain' } ), filename );
+        }
+
+        // Parse the input and generate the glTF output
+        exporter.parse(
+            this,
+            // called when the gltf has been generated
+            function ( gltf ) {
+                //console.log( gltf );
+                downloadJSON( gltf, 'blockFigure.gltf' );
+            },
+        );
+    }
 
     cleanUp() {
         this.parent.remove(this.group);
