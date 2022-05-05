@@ -318,11 +318,11 @@ class BlockFigure extends Group {
     };
 
     animate() {
-        /*if (!this.state.running) {
+        if (!this.state.running) {
             this.state.running = true;
         } else {
             return;
-        }*/
+        }
 
         //Bounce
         if(this.state.settings.animationType != 'Bounce'){
