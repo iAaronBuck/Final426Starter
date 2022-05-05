@@ -27,7 +27,8 @@ class SeedScene extends Scene {
             //colorB: '#22CBFF', 
             //step5: 10,
             // range: 50,
-            mesh:"Figure"
+            mesh:"Figure",
+            backdrop: this.background
             // speed:0,
             // func: function() 
             // { 
@@ -53,7 +54,7 @@ class SeedScene extends Scene {
 
         // controls optional meshes for scene by clearing and re-rendering
         gui.add(settings, 'mesh', ['Figure', 'Fox', 'Flower'] ).onChange(function (value) {
-            console.log(settings);
+            //console.log(settings);
             const { updateList } = sceneOG.state;
             // cleanUp loop, clear's scene on changes
             for (const obj of updateList) {
@@ -73,6 +74,10 @@ class SeedScene extends Scene {
                 const flower = new Flower(sceneOG);
                 sceneOG.add(flower);
             }
+        });
+        gui.addColor(settings, 'backdrop').onChange(function (value) {
+            //console.log("rgb(" +  value.r + ", " + value.g + ", " + value.b + ")");
+            sceneOG.background = new Color("rgb(" +  Math.floor(value.r) + ", " + Math.floor(value.g) + ", " + Math.floor(value.b) + ")");
         });
 
         // Add default meshes to scene

@@ -3,7 +3,7 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import gsap from "gsap";
 import * as Dat from 'dat.gui';
 import { IcosahedronGeometry, CylinderGeometry, ConeGeometry} from 'three';
-import { MeshPhysicalMaterial } from 'three';
+import { MeshPhysicalMaterial, DodecahedronGeometry } from 'three';
 import { MeshPhongMaterial } from 'three';
 
 const degreesToRadians = (degrees) => {
@@ -51,16 +51,18 @@ class BlockFigure extends Group {
             bodyMesh: null,
             armMesh: [],
             legMesh: [],
+            //timeLine: null,
             settings: {
-                animationType: 'Dance',
+                // originalParams: JSON.parse(JSON.stringify(this.params)),
+                animationType: 'Walk',
                 lastAnimation: '',
-                armType: 'blocky',
+                armType: 'cylindrical',
                 armColor: 0,
                 bodyType: 'blocky',
                 bodyColor: 0,
                 legType: 'blocky',
                 legColor: 0,
-                headType: 'conic',
+                headType: 'icosahedron',
                 headHue: random(0, 360),
                 headColor: 0,
                 bodyHue: random(0, 360),
@@ -99,10 +101,12 @@ class BlockFigure extends Group {
 
         gui.add(settings, 'animationType', [ 'Bounce', 'Run', 'Walk', 'Dance'] ).onChange(function (value) {
             OG.state.parent.remove(OG.group);
+            //OG.params = OG.state.settings.originalParams;
             OG.arms = [];
             OG.legs = [];
             OG.state.settings.animationType = value;
             //console.log(value);
+            //gsap.killTweensOf(OG.params);
 
             OG.init()
             // after changes complete
@@ -116,7 +120,7 @@ class BlockFigure extends Group {
         //     }
         // });
 
-        gui.add(settings, 'headType', [ 'blocky', 'cylindrical', 'spherical', 'icosahedron', 'conic'] ).onChange(function (value) {
+        gui.add(settings, 'headType', [ 'blocky', 'cylindrical', 'spherical', 'icosahedron', 'conic', 'dodecahedron'] ).onChange(function (value) {
             // cleanUp loop, clear's scene on changes
             // upon re-render for change
             OG.state.parent.remove(OG.group);
@@ -294,6 +298,8 @@ class BlockFigure extends Group {
             geometry = new IcosahedronGeometry(0.85);
         } else if (this.state.settings.headType == 'conic') {
             geometry = new ConeGeometry(0.85, 1.5);
+        } else if (this.state.settings.headType == 'dodecahedron') {
+            geometry = new DodecahedronGeometry(0.85);
         }
 
 		this.state.headMesh = new Mesh(geometry, this.headMaterial);
@@ -364,6 +370,8 @@ class BlockFigure extends Group {
         } else if (this.state.settings.headType == 'conic') {
             eyes.position.z = 0.35;
             eyes.position.y -= 0.3
+        } else if (this.state.settings.headType == 'dodecahedron') {
+            eyes.position.z = 0.55;
         } else {
             eyes.position.z = 0.7;
         }
@@ -392,17 +400,13 @@ class BlockFigure extends Group {
 			const m = i % 2 === 0 ? 1 : -1;
             legGroup.add(leg);
             this.body.add(legGroup);
-			//legs.add(leg);
 			leg.position.x = m * 0.22;
             leg.position.y = -1.45;
-            legGroup.rotation.x = 0; //degreesToRadians(30 * m);
+            legGroup.rotation.x = 0; 
             this.legs.push(legGroup);
 		}
         this.state.legMesh.push(this.legs[0]);
         this.state.legMesh.push(this.legs[1]);
-		//this.group.add(legs);
-		//legs.position.y = -1.15;
-		//this.body.add(legs);
 	}
 
 	bounce() {
@@ -463,8 +467,13 @@ class BlockFigure extends Group {
             if (this.state.lastAnimation == this.state.animationType) {
                 return;
             }
-            //gsap.killTweensOf(this.params);
+            // gsap.killTweensOf(this.params);
         }
+        // if (this.timeLine) {
+        //     this.timeLine.clear()
+        //     //this.timeLine = null;
+        // }
+        // this.timeLine = gsap.timeline()
         console.log(this.state.settings.animationType)
         //Bounce
         if(this.state.settings.animationType == 'Bounce'){
